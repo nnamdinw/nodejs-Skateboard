@@ -50,19 +50,31 @@ var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHe
 var renderer = new THREE.WebGLRenderer();
 
 var container = document.getElementById('renderspace');
-console.log(container);
+//console.log(container);
 var w = 800;
 var h = 800;
 renderer.setSize(w,h);
 
 container.appendChild( renderer.domElement );
 
-var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-var material = new THREE.MeshBasicMaterial( { color: 0x6d31c6 } );
+var geometry = new THREE.BoxGeometry( 3, 1, 1 );
+/*var material = new THREE.LineDashedMaterial(  {
+	color: 0xffaa00,
+	linewidth: 1,
+	scale: 1,
+	dashSize: 1,
+	gapSize: 2,
+} );
+*/
+var material = new THREE.MeshBasicMaterial( { wireframe: true, } );
 var cube = new THREE.Mesh( geometry, material );
+//var cube = new THREE.LineSegments( THREE.geometryCube, new THREE.LineDashedMaterial( { color: 0xffaa00, dashSize: 30, gapSize: 10, linewidth: 2 } ) );
+
 scene.add( cube );
 var m4 = new THREE.Matrix4();
-camera.position.z = 5;
+camera = new THREE.PerspectiveCamera( 60, w / h, 1, 200 );
+camera.position.z = 10;
+var rot = 0;
 
   $(function () {
     var socket = io();
@@ -72,9 +84,9 @@ camera.position.z = 5;
       q1 = msg.data.q1;
       q2 = msg.data.q2;
       q3 = msg.data.e3;
-  var rot = new THREE.Quaternion(q0,q1,q2,q3);
+  	 rot = new THREE.Quaternion(q0,q1,q2,q3);
  m4.makeRotationFromQuaternion(rot);
-      console.log(m4);
+      //console.log(m4);
  		$("#axV").text(msg.data.ax);
  		$("#ayV").text(msg.data.ay);
  		$("#azV").text(msg.data.az);
