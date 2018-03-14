@@ -1,0 +1,20 @@
+{
+  "name": "sk8",
+  "version": "1.0.0",
+  "description": "sk8 server and clientside",
+  "main": "sk8.js",
+  "dependencies": {
+    "bl": "^1.2.1",
+    "express": "^4.16.2",
+    "npm": "^5.7.1",
+    "socket.io": "^2.0.4",
+    "three": "^0.90.0",
+    "through2-map": "^3.0.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "-test"
+  },
+  "author": "nomde",
+  "license": "UNLICENSED"
+}

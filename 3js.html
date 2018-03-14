@@ -1,0 +1,101 @@
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>Skateboard Rotation Visualizer</title>
+		<style>
+			body { margin: 0; }
+			#renderspace { width: 800; 
+						  height: 800; 
+						  background-color: #FFF;
+ }
+		</style>
+	</head>
+	<body>
+		<script src="/js/three.js"></script>
+		  <script src="/socket.io/socket.io.js"></script>
+		  <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+      <!--Import materialize.css-->
+      <link type="text/css" rel="stylesheet" href="css/materialize.css"  media="screen,projection"/>
+ 		 <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+<script type="text/javascript" src="js/materialize.min.js"></script>
+  
+		
+
+<div class = "fontainer">
+	<div class = "row">
+	<span class = "flow-text">Skateboard Socket Demo</span><br><br>
+	<div class = "col l6" id = "renderspace"></div>
+	<div class = "card-panel col l6">
+		<ul class = "collection">
+			<h5>Ax</h5><li class = "collection-item" id = "axV"></li>
+			<h5>Ay</h5><li class = "collection-item" id = "ayV"></li>
+			<h5>Az</h5><li class = "collection-item" id = "azV"></li>
+			<h5>RPM</h5><li class = "collection-item" id = "rpmV"></li>
+			<h5>WheelSpeed</h5><li class = "collection-item" id = "wsV"></li>
+			<h5>Frame Index</h5><li class = "collection-item" id = "fiV"></li>
+			</ul>
+			
+	</div>
+	</div>
+	</div>
+
+
+	<script>
+
+		var q0,q1,q2,q3;
+
+ var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+var renderer = new THREE.WebGLRenderer();
+
+var container = document.getElementById('renderspace');
+console.log(container);
+var w = 800;
+var h = 800;
+renderer.setSize(w,h);
+
+container.appendChild( renderer.domElement );
+
+var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+var material = new THREE.MeshBasicMaterial( { color: 0x6d31c6 } );
+var cube = new THREE.Mesh( geometry, material );
+scene.add( cube );
+var m4 = new THREE.Matrix4();
+camera.position.z = 5;
+
+  $(function () {
+    var socket = io();
+      socket.on('pi_frame', function(msg){
+      //$('#messages').append($('<li>').text('frame count: ' + msg));
+      q0 = msg.data.q0;
+      q1 = msg.data.q1;
+      q2 = msg.data.q2;
+      q3 = msg.data.e3;
+  var rot = new THREE.Quaternion(q0,q1,q2,q3);
+ m4.makeRotationFromQuaternion(rot);
+      console.log(m4);
+ 		$("#axV").text(msg.data.ax);
+ 		$("#ayV").text(msg.data.ay);
+ 		$("#azV").text(msg.data.az);
+ 		$("#rpmV").text( msg.data.rpm);
+ 		$("#wsV").text(msg.data.wheelspeed);
+ 		$("#fiV").text( msg.data.index);
+
+
+
+
+function animate() {
+requestAnimationFrame( animate );
+
+cube.setRotationFromMatrix(m4);
+
+renderer.render( scene, camera );
+}
+animate();
+	  });
+ });
+
+		</script>
+	</body>
+</html>
