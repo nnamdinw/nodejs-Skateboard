@@ -1,6 +1,6 @@
 {
   "name": "sk8",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "sk8 server and clientside",
   "main": "sk8.js",
   "dependencies": {
@@ -16,5 +16,13 @@
     "test": "-test"
   },
   "author": "nomde",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nnamdinw/nodejs-Skateboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nnamdinw/nodejs-Skateboard/issues"
+  },
+  "homepage": "https://github.com/nnamdinw/nodejs-Skateboard#readme"
 }
