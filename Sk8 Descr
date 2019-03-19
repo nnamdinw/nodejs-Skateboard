@@ -1,0 +1,43 @@
+Pi Serv:
+
+US5881
+	classname us5881
+	us5881::setPinID(14)
+	us5881::init()
+	us5881::poll() <- boolean returns true when new data is available
+	us5881::getRPM();
+	us5881::getWheelSpeed(char); <- mph
+
+
+MPL3115A2
+	classname MPL3115A2
+	::setModeActive()
+	::setModeAltimeter()
+	::setOversampleRate(7)
+	::readAltitudeFt()
+	::readTempF();
+
+MPU9250
+	classname MPU9250
+	::readTempData()
+	::MPU9250SelfTest(selfTest); //where selfTest is a float[6] which will hold ax,ay,az,gx,gy,gz percentage difference from factory calibration
+	::calibrateMPU9250(::gyroBias,::accelBias); //where gyroBias & accelBias are float[3] members of our class
+	::initMPU9250();
+	::initAK8963(::magCalibration) // same as above
+
+
+	#define DEG_TO_RAD M_PI/180
+	#define RAD_TO_DEG 180/M_PI
+
+Web Serv:
+
+Pi Thread(input):
+- accept JSON object from PI
+- parse, EITHER
+			- insert into sql db
+			- write to vector like data structure for 'realtime' viewing on webthread
+
+
+
+WebThread(output):
+-write output based contents of vector like datastructure

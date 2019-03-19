@@ -10,14 +10,39 @@ const http = require('http').Server(app);
 var io = require('socket.io')(http);
 var path = require('path');
 var mysql = require('mysql');
+var amqp = require('amqplib');
+var Mustache = require('mustache-express');
+
+app.engine('MST', Mustache());
+app.engine('mst', Mustache());
+
+
+var amqp_server = {
+  protocol: 'amqp',
+  hostname: '192.168.1.109',
+  port: 5672,
+  username: 'webuser',
+  password: '258654as',
+  locale: 'en_US',
+  frameMax: 0,
+  heartbeat: 0,
+  vhost: 'skate',
+};
+
 var lastIndex = 0;
 
+//RABBITMQ VARS
+var qname = "command_queue";
+var exchangename = 'skate_exchange';
+var lastPi = false;
+//
 
-
+var pos = [0,0,0]; //store xyz rot pos
 var dataIn = new BufferList(); //construct our empty buffer list
 var piConnection = false;
 var pi_lastConnection = 0;
 var switchboard = [0,0,0,0];
+
 
 var con = mysql.createConnection({
 	host:"localhost",
@@ -35,9 +60,13 @@ con.connect(function(err){
 });
 });
 
-
-
-
+var pi_data = {
+	"version": '0.1',
+	"active_pis": {	
+		"pi_name" : ['Pi_Alpha'],
+		"pi_id" : ["1"]
+		}
+};
 
 
 function getType(p) {
@@ -107,7 +136,7 @@ function addTripData(trip,index)
 }
 function parseTrip(data)
 {
-//blocking asf! make async pls
+	//blocking asf! make async pls
 	var nFrames = data.split('\n');
 	//nFrames.splice()
 
@@ -157,18 +186,14 @@ function parseFrame(data)
 
 function consumeFrame(stream)
 {
-
-
-
-if(dataIn.length > 0)
-{	
-	return stream.pipe(dataIn).toString();
-}
-else
-{
-	return "No frames to display!";
-}
-
+	if(dataIn.length > 0)
+	{	
+		return stream.pipe(dataIn).toString();
+	}
+	else
+	{
+		return "No frames to display!";
+	}
 }
 
 
@@ -207,6 +232,11 @@ function getTrip(res,trip)
 
 }
 
+app.set('view engine', 'mustache');
+//app.set('pi',path.join(__dirname,'views'));
+app.use(express.static(path.join(__dirname, 'views')));
+
+//app.use('/static', express.static(path.join(__dirname, 'public')))
 
 
 
@@ -265,24 +295,98 @@ app.get('/Trip/:atrip',function (req,res){
 
 app.get('/',function (req,res){
 	
-	res.sendFile(__dirname + '/3js.html');
+	res.render('skate_main.MST',pi_data);
 });
-/*
 
-	if(switchboard[0] != 0){
-
+app.get('/pi/:piId',function (req,res){
 	
-		io.emit("pi_frame",switchboard[0]);
-	//	socket.emit('pi_frame',switchboard[0]);
-		switchboard[0] == 0;
+	res.render('skate_specific.mst',pi_data);
+	var choosenPie = req.params.piId;
+});
 
-		console.log('pi frame');
-	   
-	//	console.log('pi_frame');
-	}
+
+
+
+
+/*
+amqp.connect(amqp_server).then(function(conn) {
+  return conn.createChannel().then(function(ch) {
+    var q = 'command_queue';
+    var msg = 'HELLO_CRUEL_WORLD';
+    channel = ch;
+    var ok = ch.assertQueue(q, {durable: false});
+
+    return ok.then(function(_qok) {
+      // NB: `sentToQueue` and `publish` both return a boolean
+      // indicating whether it's OK to send again straight away, or
+      // (when `false`) that you should wait for the event `'drain'`
+      // to fire before writing again. We're just doing the one write,
+      // so we'll ignore it.
+      ch.sendToQueue(q, Buffer.from(msg));
+      console.log(" [x] Sent '%s'", msg);
+      return ch.close();
+    });
+  }).finally(function() { conn.close(); });
+}).catch(console.warn);
+*/
+/*
+amqp.connect(amqp_server).then(function(conn) {
+  process.once('SIGINT', function() { conn.close(); });
+  return conn.createChannel().then(function(ch) {
+
+    var ok = ch.assertQueue('command_queue', {durable: false});
+
+    ok = ok.then(function(_qok) {
+      return ch.consume(qname, function(msg) {
+        console.log(" [x] Received '%s'", msg.content.toString());
+      }, {noAck: false});
+    });
+
+    return ok.then(function(_consumeOk) {
+      console.log(' [*] Waiting for messages. To exit press CTRL+C');
+    });
+  });
+}).catch(console.warn);
 */
 
-app.use(express.static(path.join(__dirname, 'public')));
+function bail(err) {
+  console.error(err);
+  process.exit(1);
+}
+ 
+// Publisher
+function publisher(conn,msg) {
+  conn.createChannel(on_open);
+  function on_open(err, ch) {
+    if (err != null) bail(err);
+    ch.assertQueue(qname,{durable: false});
+    ch.assertExchange(exchangename,'fanout',{durable: false})
+    ch.sendToQueue(qname, Buffer.from(msg));
+  }
+}
+ 
+// Consumer
+function consumer(conn) {
+  var ok = conn.createChannel(on_open);
+  function on_open(err, ch) {
+    if (err != null) bail(err);
+    ch.assertQueue(qname,{durable: false});
+    ch.assertExchange(exchangename,'fanout',{durable: false});
+    ch.consume(qname, function(msg) {
+      if (msg !== null) {
+        console.log(msg.content.toString());
+        ch.ack(msg);
+      }
+    });
+  }
+}
+ 
+
+
+
+http.listen(8080,function() {
+	console.log('listening on *:8080');
+})
 
 
 io.on('connection', function(socket) {
@@ -291,17 +395,17 @@ io.on('connection', function(socket) {
 
 
 
-	socket.on('pi_frame',function(msg) {
-	 io.emit('pi_frame', msg);
-	//console.log('message ' + message);
+	socket.on('web_command',function(msg) {
+	
+	require('amqplib/callback_api')
+  .connect(amqp_server, function(err, conn) {
+    if (err != null) bail(err);
+    //consumer(conn);
+    publisher(conn,msg);
+  });
+	 io.emit('web_command', msg);
+	 console.log('message ' + msg);
 	
 
 });
 });
-
-
-
-
-http.listen(8080,function() {
-	console.log('listening on *:8080');
-})
