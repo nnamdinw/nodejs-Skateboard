@@ -349,6 +349,7 @@ amqp.connect(amqp_server).then(function(conn) {
 }).catch(console.warn);
 */
 
+
 function bail(err) {
   console.error(err);
   process.exit(1);
@@ -382,14 +383,30 @@ function consumer(conn) {
 }
  
 
+ function emitFunc(msg)
+{
+	//io.emit('web_command',msg);
+		require('amqplib/callback_api')
+  .connect(amqp_server, function(err, conn) {
+    if (err != null) bail(err);
+    //consumer(conn);
+    publisher(conn,msg);
+  });
+	//console.log('emitFunc : ' + msg);
+}
+
 
 
 http.listen(8080,function() {
 	console.log('listening on *:8080');
 })
 
+var heartbeat = setInterval(emitFunc,15000,'heyQtPi');
+
+
 
 io.on('connection', function(socket) {
+
 
 	console.log('a user connected');
 
@@ -403,7 +420,9 @@ io.on('connection', function(socket) {
     //consumer(conn);
     publisher(conn,msg);
   });
-	 io.emit('web_command', msg);
+
+
+	// io.emit('web_command', msg);
 	 console.log('message ' + msg);
 	
 
