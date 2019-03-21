@@ -32,7 +32,11 @@ var amqp_server = {
 var lastIndex = 0;
 
 //RABBITMQ VARS
-var qname = "command_queue";
+var qname_web = "web_command_queue";
+var qname_pi = "pi_command_queue";
+
+var routingKeyName = "piAlpha";
+//var qnamePi = "pi_command_queue";
 var exchangename = 'skate_exchange';
 var lastPi = false;
 //
@@ -68,6 +72,10 @@ var pi_data = {
 		}
 };
 
+function makePiObj()
+{
+	//If Pi  hello is received, or heartbeat isn't acknowledged call this method to update piObject	
+}
 
 function getType(p) {
     if (Array.isArray(p)) return 'array';
@@ -295,60 +303,56 @@ app.get('/Trip/:atrip',function (req,res){
 
 app.get('/',function (req,res){
 	
-	res.render('skate_main.MST',pi_data);
+	res.render('skate_main.MST',connectedPi);
 });
 
 app.get('/pi/:piId',function (req,res){
-	
-	res.render('skate_specific.mst',pi_data);
 	var choosenPie = req.params.piId;
+
+	if(connectedPi){
+
+			res.render('skate_specific.mst',connectedPi);
+	}
+	else
+	{
+		res.render('skate_main.MST',connectedPi);
+	}
 });
 
 
+function parseMessage(msg)
+{
 
+	var obj;
+	if(msg.charAt(0) =='{')
+	{
 
+		obj = JSON.parse(msg);
 
+	
+		connectedPi =  {
+		"version": '0.2',
+		"active_pis": {	
+		"pi_name" : [obj.name],
+		"pi_id" : ["1"],
+		"configuration": obj.config
+		}
+	};
+	}
+}
+	
+
+var connectedPi = false;
 /*
-amqp.connect(amqp_server).then(function(conn) {
-  return conn.createChannel().then(function(ch) {
-    var q = 'command_queue';
-    var msg = 'HELLO_CRUEL_WORLD';
-    channel = ch;
-    var ok = ch.assertQueue(q, {durable: false});
-
-    return ok.then(function(_qok) {
-      // NB: `sentToQueue` and `publish` both return a boolean
-      // indicating whether it's OK to send again straight away, or
-      // (when `false`) that you should wait for the event `'drain'`
-      // to fire before writing again. We're just doing the one write,
-      // so we'll ignore it.
-      ch.sendToQueue(q, Buffer.from(msg));
-      console.log(" [x] Sent '%s'", msg);
-      return ch.close();
-    });
-  }).finally(function() { conn.close(); });
-}).catch(console.warn);
+var connectedPi = {
+	"version": '0.1',
+	"active_pis": {	
+		"pi_name" : 'Yeet',
+		"pi_id" : ["1"],
+		"configuration": 0
+		}
+};
 */
-/*
-amqp.connect(amqp_server).then(function(conn) {
-  process.once('SIGINT', function() { conn.close(); });
-  return conn.createChannel().then(function(ch) {
-
-    var ok = ch.assertQueue('command_queue', {durable: false});
-
-    ok = ok.then(function(_qok) {
-      return ch.consume(qname, function(msg) {
-        console.log(" [x] Received '%s'", msg.content.toString());
-      }, {noAck: false});
-    });
-
-    return ok.then(function(_consumeOk) {
-      console.log(' [*] Waiting for messages. To exit press CTRL+C');
-    });
-  });
-}).catch(console.warn);
-*/
-
 
 function bail(err) {
   console.error(err);
@@ -360,22 +364,48 @@ function publisher(conn,msg) {
   conn.createChannel(on_open);
   function on_open(err, ch) {
     if (err != null) bail(err);
-    ch.assertQueue(qname,{durable: false});
-    ch.assertExchange(exchangename,'fanout',{durable: false})
-    ch.sendToQueue(qname, Buffer.from(msg));
+    ch.assertQueue(qname_web,{durable: false});
+    ch.assertExchange(exchangename,'direct',{durable: false});
+
+
+    ch.publish(exchangename,routingKeyName,Buffer.from(msg));
+
+        //check channel for unprocessed messages
+    ch.get(qname_web,{}, function(err, data) {
+
+    	//console.log(data);
+    	//console.log(err);
+    	if(data == null && data.fields.messageCount > 0)
+    	{
+    		console.log('backlog, no pi');
+    	}
+    	else
+    	{
+    		if(connectedPi == false)
+    		{
+    			    ch.publish(exchangename,routingKeyName,Buffer.from("Pi_Control_Send_Config_"));
+
+    		}
+    		//console.log('ok');
+    	}
+    });
+
+
   }
 }
  
-// Consumer
+// Consumerq
 function consumer(conn) {
   var ok = conn.createChannel(on_open);
   function on_open(err, ch) {
     if (err != null) bail(err);
-    ch.assertQueue(qname,{durable: false});
-    ch.assertExchange(exchangename,'fanout',{durable: false});
-    ch.consume(qname, function(msg) {
+    ch.assertQueue(qname_pi,{durable: false});
+    ch.assertExchange(exchangename,'direct',{durable: false});
+    ch.consume(qname_pi, function(msg) {
       if (msg !== null) {
         console.log(msg.content.toString());
+        parseMessage(msg.content.toString());
+
         ch.ack(msg);
       }
     });
@@ -401,30 +431,41 @@ http.listen(8080,function() {
 	console.log('listening on *:8080');
 })
 
-var heartbeat = setInterval(emitFunc,15000,'heyQtPi');
+var heartbeat = setInterval(emitFunc,15000,'keepalive');
 
+
+	require('amqplib/callback_api')
+ 		 .connect(amqp_server, 
+ 		 	function(err, conn) {
+				    if (err != null) bail(err);
+				    consumer(conn); 
+				   // publisher(conn,msg);
+  			}
+  			);
 
 
 io.on('connection', function(socket) {
-
-
-	console.log('a user connected');
+console.log('a user connected');
 
 
 
-	socket.on('web_command',function(msg) {
+socket.on('web_command',function(msg) {
 	
 	require('amqplib/callback_api')
-  .connect(amqp_server, function(err, conn) {
-    if (err != null) bail(err);
-    //consumer(conn);
-    publisher(conn,msg);
-  });
+ 		 .connect(amqp_server, 
+ 		 	function(err, conn) {
+				    if (err != null) bail(err);
+				  //  consumer(conn); 
+				    publisher(conn,msg);
+  			}
+  			);
 
 
-	// io.emit('web_command', msg);
-	 console.log('message ' + msg);
-	
+	});
+ }
+);
 
-});
-});
+
+
+
+

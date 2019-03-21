@@ -12,6 +12,10 @@
 <title>Skate Control V{{ version }}</title>
 <style>
 
+.side-nav {
+    transform: translateX(0%) !important;
+}
+
   .roundButton {
     border-radius: 12px;
   }
@@ -82,30 +86,32 @@ Skate Control V{{ version }}
 <blockquote> ... Polling Config Options ...</blockquote>
   <form action="#">
     <p>
-      <input name="group1" type="radio" id="test1" onclick="sendMq('Set_Config_1')" />
+      <input name="group1" type="radio" id="test1" onclick="sendMq('Pi_Control_Set_Config_1')" />
       <label for="test1">Euler </label>
     </p>
     <p>
-      <input name="group1" type="radio" id="test2" onclick="sendMq('Set_Config_2')"/>
+      <input name="group1" type="radio" id="test2" onclick="sendMq('Pi_Control_Set_Config_2')"/>
       <label for="test2">Quaternion</label>
     </p>
     <p>
-      <input class="with-gap" name="group1" type="radio" id="test3" onclick="sendMq('Set_Config_3')" />
+      <input class="with-gap" name="group1" type="radio" id="test3" onclick="sendMq('Pi_Control_Set_Config_3')" />
       <label for="test3">Euler & Accelerometer</label>
     </p>
     <p>
-      <input name="group1" type="radio" id="test4"  onclick="sendMq('Set_Config_4')"/>
+      <input name="group1" type="radio" id="test4"  onclick="sendMq('Pi_Control_Set_Config_4')"/>
       <label for="test4">Quaternion & Acceleromoeter</label>
     </p>
   </form>
 
 <ul class = collection>
-<a class="waves-effect waves-light btn-large green" onclick="sendMq('Pi_Control_Start_Poll');">Start Polling</a>
-<a class="waves-effect waves-light btn-large red" onclick="sendMq('Pi_Control_Stop_Poll');">Stop Polling</a>
+<a class="waves-effect waves-light btn-flat green" onclick="sendMq('Pi_Control_Start_Poll');">Start Polling</a>
+<a class="waves-effect waves-light btn-flat red" onclick="sendMq('Pi_Control_Stop_Poll');">Stop Polling</a>
 </ul>
 <blockquote> ... MISC ...</blockquote>
 
-<a class="waves-effect waves-light btn-large" onclick="sendMq('Pi_Control_buzz_0')">Send Buzz</a>
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_buzz_0')">Send Buzz</a>
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Ping')">Send Ping</a>
+
 <ul class = collection>
 <li class = "collection-item"><h6>Logs</h6></li>
 <li class = "collection-item">001.csv | 2kB <a class="waves-effect waves-light btn red" >Download</a></li>
