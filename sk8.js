@@ -373,14 +373,16 @@ function publisher(conn,msg) {
         //check channel for unprocessed messages
     ch.get(qname_web,{}, function(err, data) {
 
-    	//console.log(data);
     	//console.log(err);
-    	if(data == null && data.fields.messageCount > 0)
+    	if(data != false)
     	{
     		console.log('backlog, no pi');
+    		connectedPi = false;
     	}
     	else
     	{
+    		    	console.log(data);
+
     		if(connectedPi == false)
     		{
     			    ch.publish(exchangename,routingKeyName,Buffer.from("Pi_Control_Send_Config_"));

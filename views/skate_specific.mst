@@ -111,6 +111,7 @@ Skate Control V{{ version }}
 
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_buzz_0')">Send Buzz</a>
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Ping')">Send Ping</a>
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Terminate')">Kill</a>
 
 <ul class = collection>
 <li class = "collection-item"><h6>Logs</h6></li>
