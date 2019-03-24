@@ -19,7 +19,7 @@ app.engine('mst', Mustache());
 
 var amqp_server = {
   protocol: 'amqp',
-  hostname: '192.168.1.109',
+  hostname: 'www2.nwajagu.com',
   port: 5672,
   username: 'webuser',
   password: '258654as',
@@ -333,11 +333,12 @@ function parseMessage(msg)
 		{
 			//add entry and reload view
 			//console.log("pi log obj received ");
-			//console.log(obj);
+			console.log(obj);
 			connectedPi.logfiles = obj;
 			io.emit('pi_alert','reload');
-
+			io.emit('Web_Alert_NewLog_Name',obj.filename);
 			//console.log(Object.keys(connectedPi.logfiles));
+
 
 		}
 
@@ -362,7 +363,7 @@ function parseMessage(msg)
 		{
 			//var pos = msg.indexOf("Pi_Message_Log_Data_");
 			var logData = msg.substr(logFlag.length);
-			console.log(logData);
+			io.emit('Web_Alert_NewLog_Data',logData);
 		}
 	}
 }

@@ -6,7 +6,7 @@
 <!--Import materialize.css-->
 <link type="text/css" rel="stylesheet" href="css/materialize.css"  media="screen,projection"/>
 <script src="/socket.io/socket.io.js"></script>
-
+<script type="text/javascript" src="js/FileSaver.min.js"></script>
 <script type="text/javascript" src="js/materialize.min.js"></script>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
 <title>Skate Control V{{ version }}</title>
@@ -31,18 +31,28 @@
 
 
     var socket = io();
+    var filename = "";
       socket.on('pi_alert', function(msg){
       	if(msg == "reload")
       	{
       		location.reload();
       	}
       //$('#messages').append($('<li>').text('frame count: ' + msg));
-
-
-
-
-
 	  });
+        socket.on('Web_Alert_NewLog_Name', function(msg){
+ 		filename = msg;
+      //$('#messages').append($('<li>').text('frame count: ' + msg));
+	  });
+
+        socket.on('Web_Alert_NewLog_Data', function(msg){
+     		var blob = new Blob([msg], {
+			 type: "text/plain;charset=utf-8"
+			});
+			saveAs(blob,filename);
+	  });
+
+
+
 
   	function sendMq(msg)
  	{
