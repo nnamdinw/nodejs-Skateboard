@@ -322,22 +322,48 @@ app.get('/pi/:piId',function (req,res){
 
 function parseMessage(msg)
 {
-
+	var logFlag = "Pi_Message_Log_Data_";
 	var obj;
 	if(msg.charAt(0) =='{')
 	{
-
+		//console.log(msg);
 		obj = JSON.parse(msg);
 
-	
-		connectedPi =  {
-		"version": '0.2',
-		"active_pis": {	
-		"pi_name" : [obj.name],
-		"pi_id" : ["1"],
-		"configuration": obj.config
+		if(obj.logs != null)
+		{
+			//add entry and reload view
+			//console.log("pi log obj received ");
+			//console.log(obj);
+			connectedPi.logfiles = obj;
+			io.emit('pi_alert','reload');
+
+			//console.log(Object.keys(connectedPi.logfiles));
+
 		}
-	};
+
+		if(obj.name != null)
+		{
+			connectedPi =  {
+			"version": '0.2',
+			"active_pis": {	
+			"pi_name" : [obj.name],
+			"pi_id" : ["1"],
+			"configuration": obj.config,
+			"logfiles" : []
+			}
+		}
+	
+	}
+
+	}
+	else
+	{
+		if(msg.indexOf(logFlag) != -1)
+		{
+			//var pos = msg.indexOf("Pi_Message_Log_Data_");
+			var logData = msg.substr(logFlag.length);
+			console.log(logData);
+		}
 	}
 }
 	
@@ -381,7 +407,7 @@ function publisher(conn,msg) {
     	}
     	else
     	{
-    		    	console.log(data);
+	    	//console.log(data);
 
     		if(connectedPi == false)
     		{
@@ -405,7 +431,7 @@ function consumer(conn) {
     ch.assertExchange(exchangename,'direct',{durable: false});
     ch.consume(qname_pi, function(msg) {
       if (msg !== null) {
-        console.log(msg.content.toString());
+        //console.log(msg.content.toString());
         parseMessage(msg.content.toString());
 
         ch.ack(msg);
@@ -429,8 +455,8 @@ function consumer(conn) {
 
 
 
-http.listen(8080,function() {
-	console.log('listening on *:8080');
+http.listen(8081,function() {
+	console.log('listening on *:8081');
 })
 
 var heartbeat = setInterval(emitFunc,15000,'keepalive');

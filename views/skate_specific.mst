@@ -31,7 +31,11 @@
 
 
     var socket = io();
-      socket.on('pi_frame', function(msg){
+      socket.on('pi_alert', function(msg){
+      	if(msg == "reload")
+      	{
+      		location.reload();
+      	}
       //$('#messages').append($('<li>').text('frame count: ' + msg));
 
 
@@ -86,11 +90,11 @@ Skate Control V{{ version }}
 <blockquote> ... Polling Config Options ...</blockquote>
   <form action="#">
     <p>
-      <input name="group1" type="radio" id="test1" onclick="sendMq('Pi_Control_Set_Config_1')" />
+      <input class="with-gap name="group1" type="radio" id="test1" onclick="sendMq('Pi_Control_Set_Config_1')" />
       <label for="test1">Euler </label>
     </p>
     <p>
-      <input name="group1" type="radio" id="test2" onclick="sendMq('Pi_Control_Set_Config_2')"/>
+      <input class="with-gap name="group1" type="radio" id="test2" onclick="sendMq('Pi_Control_Set_Config_2')"/>
       <label for="test2">Quaternion</label>
     </p>
     <p>
@@ -98,7 +102,7 @@ Skate Control V{{ version }}
       <label for="test3">Euler & Accelerometer</label>
     </p>
     <p>
-      <input name="group1" type="radio" id="test4"  onclick="sendMq('Pi_Control_Set_Config_4')"/>
+      <input class="with-gap name="group1" type="radio" id="test4"  onclick="sendMq('Pi_Control_Set_Config_4')"/>
       <label for="test4">Quaternion & Acceleromoeter</label>
     </p>
   </form>
@@ -114,9 +118,12 @@ Skate Control V{{ version }}
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Terminate')">Kill</a>
 
 <ul class = collection>
-<li class = "collection-item"><h6>Logs</h6></li>
-<li class = "collection-item">001.csv | 2kB <a class="waves-effect waves-light btn red" >Download</a></li>
-<li class = "collection-item">002.csv | 2kB <a class="waves-effect waves-light btn red">Download</a></li>
+<li class = "collection-item" id="loglist"><h>Logs</h6></li>
+{{#logfiles.logs}}
+<li class = "collection-item">{{ filename }}  <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Request_Log_{{ index }}')">Download</a></li>
+{{/logfiles.logs}}
+{{^logfiles.logs}}<p><blockquote>No logs from this session</blockquote>{{/logfiles.logs}}
+
 
 </ul>
 
