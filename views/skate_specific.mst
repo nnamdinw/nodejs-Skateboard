@@ -100,11 +100,11 @@ Skate Control V{{ version }}
 <blockquote> ... Polling Config Options ...</blockquote>
   <form action="#">
     <p>
-      <input class="with-gap name="group1" type="radio" id="test1" onclick="sendMq('Pi_Control_Set_Config_1')" />
+      <input class="with-gap" name="group1" type="radio" id="test1" onclick="sendMq('Pi_Control_Set_Config_1')" />
       <label for="test1">Euler </label>
     </p>
     <p>
-      <input class="with-gap name="group1" type="radio" id="test2" onclick="sendMq('Pi_Control_Set_Config_2')"/>
+      <input class="with-gap" name="group1" type="radio" id="test2" onclick="sendMq('Pi_Control_Set_Config_2')"/>
       <label for="test2">Quaternion</label>
     </p>
     <p>
@@ -112,8 +112,8 @@ Skate Control V{{ version }}
       <label for="test3">Euler & Accelerometer</label>
     </p>
     <p>
-      <input class="with-gap name="group1" type="radio" id="test4"  onclick="sendMq('Pi_Control_Set_Config_4')"/>
-      <label for="test4">Quaternion & Acceleromoeter</label>
+      <input class="with-gap" name="group1" type="radio" id="test4"  onclick="sendMq('Pi_Control_Set_Config_4')"/>
+      <label for="test4">Quaternion & Accelerometer</label>
     </p>
   </form>
 
@@ -123,7 +123,7 @@ Skate Control V{{ version }}
 </ul>
 <blockquote> ... MISC ...</blockquote>
 
-<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_buzz_0')">Send Buzz</a>
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_indicate')">Send Indicator</a>
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Ping')">Send Ping</a>
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Terminate')">Kill</a>
 
