@@ -39,6 +39,9 @@ var routingKeyName = "piAlpha";
 //var qnamePi = "pi_command_queue";
 var exchangename = 'skate_exchange';
 var lastPi = false;
+//////
+
+var stream = "Yeet";
 //
 
 var pos = [0,0,0]; //store xyz rot pos
@@ -123,6 +126,13 @@ function createTrip(data)
 		}
 
 	  });
+}
+
+function fetchStream()
+{
+	var temp = stream;
+	stream = "";
+	return temp;
 }
 
 function addTripData(trip,index)
@@ -248,55 +258,12 @@ app.use(express.static(path.join(__dirname, 'views')));
 
 
 
-app.post('/addframe/:b64frame/',function (req,res){
 
 
-
-	var decode = req.params;
-	//decode = JSON.stringify(decode);
-	decode = Buffer.from(decode.b64frame,'base64').toString();
-	console.log(decode);
-	var ew = /\0/g;
-	decode = decode.replace(ew,"");
-
-	//console.log(JSON.stringify(decode.toString()));
-	res.send(parseFrame(decode));
-	io.emit("pi_frame", switchboard[0]);
-
-
-});
-
-app.post('/addTrip/:b64frame/',function (req,res){
-
-
-
-	var decode = req.params;
-	//decode = JSON.stringify(decode);
-	decode = Buffer.from(decode.b64frame,'base64').toString();
-	//console.log(decode);
-	var ew = /\0/g;
-	decode = decode.replace(ew,"");
-
-	//console.log(JSON.stringify(decode.toString()));
-	res.send(parseTrip(decode));
-	//io.emit("pi_frame", switchboard[0]);
-
-
-});
-
-
-app.get('/allTrips',function (req,res){
+app.get('/sensorlog/',function (req,res){
 	
-	getTrips(res);
-	
-});
-
-app.get('/Trip/:atrip',function (req,res){
-	
-	var tTrip = req.params;
-	tTrip = tTrip.atrip;
-
-	getTrip(res,tTrip);
+	return res.json(fetchStream());
+	//stream = "";
 	
 });
 
@@ -309,7 +276,7 @@ app.get('/',function (req,res){
 app.get('/pi/:piId',function (req,res){
 	var choosenPie = req.params.piId;
 
-	if(connectedPi){
+	if(connectedPi || true){
 
 			res.render('skate_specific.mst',connectedPi);
 	}
@@ -323,6 +290,8 @@ app.get('/pi/:piId',function (req,res){
 function parseMessage(msg)
 {
 	var logFlag = "Pi_Message_Log_Data_";
+	var calibFlag = "Pi_Message_Cal_";
+	var pollStreamFlag = "Pi_Message_Poll_Frame_";
 	var obj;
 	if(msg.charAt(0) =='{')
 	{
@@ -350,6 +319,7 @@ function parseMessage(msg)
 			"pi_name" : [obj.name],
 			"pi_id" : ["1"],
 			"configuration": obj.config,
+			"Calibration_Status": obj.calibration,
 			"logfiles" : []
 			}
 		}
@@ -357,15 +327,25 @@ function parseMessage(msg)
 	}
 
 	}
-	else
+	else if(msg.indexOf(logFlag) != -1)
 	{
-		if(msg.indexOf(logFlag) != -1)
-		{
 			//var pos = msg.indexOf("Pi_Message_Log_Data_");
 			var logData = msg.substr(logFlag.length);
 			io.emit('Web_Alert_NewLog_Data',logData);
-		}
+		
 	}
+	else if(msg.indexOf(calibFlag) != -1)
+	{
+		var calibData = msg.substr(calibFlag.length);
+		io.emit('Web_Alert_NewCalib_Data',calibData);
+
+	}
+	else if(msg.indexOf(pollStreamFlag) != -1)
+	{
+		var pollFrame = msg.substr(pollStreamFlag.length);
+		io.emit('Web_Alert_New_PollFrame',pollFrame);
+	}
+
 }
 	
 
@@ -456,7 +436,7 @@ function consumer(conn) {
 
 
 
-http.listen(8081,function() {
+http.listen(8080,function() {
 	console.log('listening on *:8081');
 })
 

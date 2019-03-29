@@ -6,9 +6,13 @@
 <!--Import materialize.css-->
 <link type="text/css" rel="stylesheet" href="css/materialize.css"  media="screen,projection"/>
 <script src="/socket.io/socket.io.js"></script>
+<script src = "/js/three.js"></script>
+<script src = "/js/GLTFLoader.js"></script>
+
 <script type="text/javascript" src="js/FileSaver.min.js"></script>
-<script type="text/javascript" src="js/materialize.min.js"></script>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+<script type="text/javascript" src="js/materialize.min.js"></script>
+
 <title>Skate Control V{{ version }}</title>
 <style>
 
@@ -26,40 +30,7 @@
     }
   </style>
 
-<script>
 
-
-
-    var socket = io();
-    var filename = "";
-      socket.on('pi_alert', function(msg){
-      	if(msg == "reload")
-      	{
-      		location.reload();
-      	}
-      //$('#messages').append($('<li>').text('frame count: ' + msg));
-	  });
-        socket.on('Web_Alert_NewLog_Name', function(msg){
- 		filename = msg;
-      //$('#messages').append($('<li>').text('frame count: ' + msg));
-	  });
-
-        socket.on('Web_Alert_NewLog_Data', function(msg){
-     		var blob = new Blob([msg], {
-			 type: "text/plain;charset=utf-8"
-			});
-			saveAs(blob,filename);
-	  });
-
-
-
-
-  	function sendMq(msg)
- 	{
-	socket.emit("web_command",msg);
-	}
-
-</script>
 <header>
 <div>
 <div class = "row">
@@ -77,6 +48,8 @@ Skate Control V{{ version }}
 </div>
 </nav>
 </div>
+</div>
+</div>
 </header>
 
 <ul id="slide-out" class="side-nav fixed grey lighten-2">
@@ -85,17 +58,24 @@ Skate Control V{{ version }}
  {{/active_pis}}
  {{^active_pis}}<p><blockquote>No Pis Online</blockquote>{{/active_pis}}
 <main>
-<ul class = collection>
+<div class = "row">
+<div class="col l12">
+	<ul class = "tabs">
+		<li class="tab col s6"><a href="#main" class="active">Main Control</a></li>
+        <li class="tab col s6"><a href="#viz">Data Visualizer</a></li>
+    </ul>
+</div>
+<div class = "col s12" id = "main">
+<ul class = collection col-l6>
 <li class = "collection-item"><h6>Status</h6></li> <b>Online | Not Polling</b>
 </ul>
 <ul class = collection>
-<li class = "collection-item"><h6>Software Version</h6></li> <b>0.1</b>
+<li class = "collection-item"><h6>Software Version</h6><b>0.4</b></li> 
 </ul>
 <ul class = collection>
 <li class = "collection-item"><h6>Capabilities</h6></li>
-<li class = "collection-item">Haptics</li>
+<li class = "collection-item">LED</li>
 <li class = "collection-item">IMU</li>
-<li class = "collection-item">NULL</li>
 
 <blockquote> ... Polling Config Options ...</blockquote>
   <form action="#">
@@ -121,22 +101,130 @@ Skate Control V{{ version }}
 <a class="waves-effect waves-light btn-flat green" onclick="sendMq('Pi_Control_Start_Poll');">Start Polling</a>
 <a class="waves-effect waves-light btn-flat red" onclick="sendMq('Pi_Control_Stop_Poll');">Stop Polling</a>
 </ul>
-<blockquote> ... MISC ...</blockquote>
+<blockquote> ... TOOLS ...</blockquote>
 
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_indicate')">Send Indicator</a>
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Ping')">Send Ping</a>
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Terminate')">Kill</a>
-
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Calibrate_IMU')">Recalibrate IMU</a>
+<div class = "card-panel" id="calib_status">Calibration Status</div>
 <ul class = collection>
 <li class = "collection-item" id="loglist"><h>Logs</h6></li>
 {{#logfiles.logs}}
 <li class = "collection-item">{{ filename }}  <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Request_Log_{{ index }}')">Download</a></li>
 {{/logfiles.logs}}
 {{^logfiles.logs}}<p><blockquote>No logs from this session</blockquote>{{/logfiles.logs}}
-
-
 </ul>
 
 
-</main>
 
+</div>
+
+
+<div class = "col s12" id = "viz">
+<blockquote> ... Control ...</blockquote>
+
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Toggle_Stream')">Start Poll Steam</a>
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Toggle_Stream')">Stop Poll Steam</a>
+<div id = "renderspace"></div>
+
+</div>
+</div>
+</div>
+</main>
+<script>
+
+var loader = new THREE.GLTFLoader();
+var scene = new THREE.Scene();
+
+loader.load( '/skateboard/scene.gltf', function ( gltf ) {
+
+	scene.add( gltf.scene );
+
+	}, undefined, function ( error ) {
+
+		console.error( error );
+
+	} );
+var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+
+var renderer = new THREE.WebGLRenderer();
+
+var container = document.getElementById('renderspace');
+//console.log(container);
+var w = 800;
+var h = 800;
+renderer.setSize(w,h);
+
+container.appendChild( renderer.domElement );
+
+var m4 = new THREE.Matrix4();
+camera = new THREE.PerspectiveCamera( 60, w / h, 1, 200 );
+camera.position.z = 10;
+var rot = 0;
+
+var socket = io();
+
+
+function animate() {
+requestAnimationFrame( animate );
+
+cube.setRotationFromMatrix(m4);
+
+renderer.render( scene, camera );
+}
+
+
+function sendMq(msg)
+{
+socket.emit("web_command",msg);
+}
+
+    var filename = "";
+      socket.on('pi_alert', function(msg){
+      	if(msg == "reload")
+      	{
+      		location.reload();
+      	}
+      //$('#messages').append($('<li>').text('frame count: ' + msg));
+	  });
+        socket.on('Web_Alert_NewLog_Name', function(msg){
+ 		filename = msg;
+      //$('#messages').append($('<li>').text('frame count: ' + msg));
+	  });
+
+        socket.on('Web_Alert_NewLog_Data', function(msg){
+     		var blob = new Blob([msg], {
+			 type: "text/plain;charset=utf-8"
+			});
+			saveAs(blob,filename);
+	  });
+
+        socket.on('Web_Alert_NewCalib_Data', function(msg){
+        	var calibDiv = document.getElementById("calib_status");
+        	calibDiv.innerHTML = msg;
+	  });
+
+     socket.on('Web_Alert_New_PollFrame', function(msg){
+      //$('#messages').append($('<li>').text('frame count: ' + msg));
+      q0 = msg.data.q0;
+      q1 = msg.data.q1;
+      q2 = msg.data.q2;
+      q3 = msg.data.e3;
+  	 rot = new THREE.Quaternion(q0,q1,q2,q3);
+ 	m4.makeRotationFromEuler(rot);
+ 	animate();
+
+      //console.log(m4);
+ 		//$("#axV").text(msg.data.ax);
+ 		//$("#ayV").text(msg.data.ay);
+ 		//$("#azV").text(msg.data.az);
+ 		//$("#rpmV").text( msg.data.rpm);
+ 		//$("#wsV").text(msg.data.wheelspeed);
+ 		//$("#fiV").text( msg.data.index);
+
+	});
+
+
+
+</script>
