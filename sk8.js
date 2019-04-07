@@ -87,6 +87,10 @@ function getType(p) {
     else return 'other';
 }
 
+function fetchPiData ()
+{
+	return connectedPi;
+}
 function createTrip(data)
 {
 
@@ -263,7 +267,12 @@ app.use(express.static(path.join(__dirname, 'views')));
 app.get('/sensorlog/',function (req,res){
 	
 	return res.json(fetchStream());
-	//stream = "";
+	
+});
+
+app.get('/status/',function (req,res){
+	
+	return res.json(fetchPiData());
 	
 });
 
