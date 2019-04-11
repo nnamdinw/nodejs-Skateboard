@@ -1,8 +1,6 @@
 
 const fs = require('fs');
-const map = require('through2-map');  //for modifying streams in transit chunk-wise
 const url = require('url');
-const BufferList = require('bl'); //bufferlist for appending buffers
 const three = require('three');
 var express = require('express');
 var app = express();
@@ -35,17 +33,16 @@ var lastIndex = 0;
 var qname_web = "web_command_queue";
 var qname_pi = "pi_command_queue";
 
-var routingKeyName = "piAlpha";
+var routingKeyName = "piBeta";
 //var qnamePi = "pi_command_queue";
 var exchangename = 'skate_exchange';
 var lastPi = false;
 //////
 
-var stream = "Yeet";
+var stream = "";
 //
 
 var pos = [0,0,0]; //store xyz rot pos
-var dataIn = new BufferList(); //construct our empty buffer list
 var piConnection = false;
 var pi_lastConnection = 0;
 var switchboard = [0,0,0,0];
@@ -87,10 +84,14 @@ function getType(p) {
     else return 'other';
 }
 
+
+
+
 function fetchPiData ()
 {
 	return connectedPi;
 }
+
 function createTrip(data)
 {
 
@@ -134,7 +135,8 @@ function createTrip(data)
 
 function fetchStream()
 {
-	var temp = stream;
+	var temp = "[" + stream + "]";
+	//var temp = stream;
 	stream = "";
 	return temp;
 }
@@ -174,33 +176,6 @@ function parseTrip(data)
 
 }
 
-
-function parseFrame(data)
-{
-
-
-	data = JSON.parse(data);  //now we have the json from the PI!
-	//dataIn.append(data);
-	piConnection = true;
-	if(data.data.index > lastIndex)
-	{
-		lastIndex = data.data.index;
-	}
-	else
-	{
-		return;
-	}
-
-		switchboard[0] = data; //this lets us know a new set of 30 pi frames is in 
-		//switchboard[1] = [data.ax, data.ay, data.az];
-		//switchboard[2] = [data.rpm, data.temperature];
-		//switchboard[3] = [data.index, data.timestamp];
-	
-	console.log(data);
-	//date = new Date();
-	pi_lastConnection = Date.now();
-	return "ok";
-}
 
 
 
@@ -266,13 +241,9 @@ app.use(express.static(path.join(__dirname, 'views')));
 
 app.get('/sensorlog/',function (req,res){
 	
-	return res.json(fetchStream());
-	
-});
-
-app.get('/status/',function (req,res){
-	
-	return res.json(fetchPiData());
+	//return res.json(	fetchStream()	);
+	return res.send(	fetchStream()	);
+	//stream = "";
 	
 });
 
@@ -285,7 +256,7 @@ app.get('/',function (req,res){
 app.get('/pi/:piId',function (req,res){
 	var choosenPie = req.params.piId;
 
-	if(connectedPi || true){
+	if(connectedPi){
 
 			res.render('skate_specific.mst',connectedPi);
 	}
@@ -296,10 +267,29 @@ app.get('/pi/:piId',function (req,res){
 });
 
 
+
+
+
+
+
+app.get('/sensorlog/',function (req,res){
+	
+	return res.json(fetchStream());
+	//stream = "";
+	
+});
+
+app.get('/status/',function (req,res){
+	
+	return res.json(fetchPiData());
+	
+});
+
 function parseMessage(msg)
 {
 	var logFlag = "Pi_Message_Log_Data_";
-	var calibFlag = "Pi_Message_Cal_";
+	var calibFlag = "Pi_Message_CalibrationFrame_";
+	var calibCompleteFlag = "Pi_Message_CalibrationComplete";
 	var pollStreamFlag = "Pi_Message_Poll_Frame_";
 	var obj;
 	if(msg.charAt(0) =='{')
@@ -352,7 +342,15 @@ function parseMessage(msg)
 	else if(msg.indexOf(pollStreamFlag) != -1)
 	{
 		var pollFrame = msg.substr(pollStreamFlag.length);
+		//console.log("Frame rec");
+		stream += pollFrame;
+		//console.log(JSON.parse(pollFrame));
 		io.emit('Web_Alert_New_PollFrame',pollFrame);
+	}
+	else if(msg.indexOf(calibCompleteFlag) != -1)
+	{
+		io.emit('Web_Alert_CalibrationComplete');
+
 	}
 
 }
@@ -385,15 +383,17 @@ function publisher(conn,msg) {
 
 
     ch.publish(exchangename,routingKeyName,Buffer.from(msg));
-
+    //console.log("Posting: " + msg);
         //check channel for unprocessed messages
     ch.get(qname_web,{}, function(err, data) {
 
-    	//console.log(err);
+    	//console.log(data);
     	if(data != false)
     	{
     		console.log('backlog, no pi');
+
     		connectedPi = false;
+
     	}
     	else
     	{
@@ -421,7 +421,7 @@ function consumer(conn) {
     ch.assertExchange(exchangename,'direct',{durable: false});
     ch.consume(qname_pi, function(msg) {
       if (msg !== null) {
-        //console.log(msg.content.toString());
+        console.log(msg.content.toString());
         parseMessage(msg.content.toString());
 
         ch.ack(msg);
@@ -445,7 +445,7 @@ function consumer(conn) {
 
 
 
-http.listen(8080,function() {
+http.listen(8081,function() {
 	console.log('listening on *:8081');
 })
 

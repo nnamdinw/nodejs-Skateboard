@@ -124,11 +124,14 @@ Skate Control V{{ version }}
 <div class = "col s12" id = "viz">
 <blockquote> ... Control ...</blockquote>
 
-<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Toggle_Stream')">Start Poll Steam</a>
-<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Toggle_Stream')">Stop Poll Steam</a>
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Enable_Stream')">Start Poll Stream</a>
+<a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Disable_Stream')">Stop Poll Stream</a>
 <div id = "renderspace"></div>
 
 </div>
+<div class = "card grey col s12">
+<p id = "newestFrame"></p>
+<p>Fetch live logs at http://nwajagu.com/sensorlog/</p>
 </div>
 </div>
 </main>
@@ -136,10 +139,14 @@ Skate Control V{{ version }}
 
 var loader = new THREE.GLTFLoader();
 var scene = new THREE.Scene();
-
+var rx,ry,rz;
+var object;
 loader.load( '/skateboard/scene.gltf', function ( gltf ) {
+	object = gltf.scene;
+  object.scale.set(10, 10, 10);
 
-	scene.add( gltf.scene );
+	scene.add( object);
+	//console.log(object);
 
 	}, undefined, function ( error ) {
 
@@ -168,9 +175,13 @@ var socket = io();
 
 function animate() {
 requestAnimationFrame( animate );
+object.rotation.x = rx;
+object.rotation.y = ry;
+object.rotation.z = rz;
 
-cube.setRotationFromMatrix(m4);
+//object.setRotationFromMatrix(m4);
 
+//console.log(scene.children[0]);
 renderer.render( scene, camera );
 }
 
@@ -202,19 +213,26 @@ socket.emit("web_command",msg);
 
         socket.on('Web_Alert_NewCalib_Data', function(msg){
         	var calibDiv = document.getElementById("calib_status");
-        	calibDiv.innerHTML = msg;
+        	calibDiv.innerHTML = "<b>Calibration Progress: </b>" + msg;
 	  });
+
+                socket.on('Web_Alert_CalibrationComplete', function(msg){
+        	var calibDiv = document.getElementById("calib_status");
+        	calibDiv.innerHTML = "<b>Calibration Complete</b>";
+	  });
+
 
      socket.on('Web_Alert_New_PollFrame', function(msg){
       //$('#messages').append($('<li>').text('frame count: ' + msg));
-      q0 = msg.data.q0;
-      q1 = msg.data.q1;
-      q2 = msg.data.q2;
-      q3 = msg.data.e3;
-  	 rot = new THREE.Quaternion(q0,q1,q2,q3);
- 	m4.makeRotationFromEuler(rot);
+      rx = msg.x;
+      ry = msg.y;
+      rz = msg.y;
+     //rot = new THREE.Euler(rx,ry,rz,'XYZ');
+ 	//m4.makeRotationFromEuler(rot);
+ 	//console.log(m4);
  	animate();
-
+	var framep = document.getElementById("newestFrame");
+	framep.innerHTML = msg;
       //console.log(m4);
  		//$("#axV").text(msg.data.ax);
  		//$("#ayV").text(msg.data.ay);
