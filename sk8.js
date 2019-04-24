@@ -18,6 +18,10 @@ app.engine('mst', Mustache());
 var amqp_server = {
   protocol: 'amqp',
   hostname: 'www2.nwajagu.com',
+
+
+
+
   port: 5672,
   username: 'webuser',
   password: '258654as',
@@ -269,16 +273,6 @@ app.get('/pi/:piId',function (req,res){
 
 
 
-
-
-
-app.get('/sensorlog/',function (req,res){
-	
-	return res.json(fetchStream());
-	//stream = "";
-	
-});
-
 app.get('/status/',function (req,res){
 	
 	return res.json(fetchPiData());
@@ -421,7 +415,7 @@ function consumer(conn) {
     ch.assertExchange(exchangename,'direct',{durable: false});
     ch.consume(qname_pi, function(msg) {
       if (msg !== null) {
-        console.log(msg.content.toString());
+        //console.log(msg.content.toString());
         parseMessage(msg.content.toString());
 
         ch.ack(msg);

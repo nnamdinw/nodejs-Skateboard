@@ -8,6 +8,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src = "/js/three.js"></script>
 <script src = "/js/GLTFLoader.js"></script>
+<script src="js/controls/OrbitControls.js"></script>
 
 <script type="text/javascript" src="js/FileSaver.min.js"></script>
 <script type="text/javascript" src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
@@ -84,7 +85,7 @@ Skate Control V{{ version }}
       <label for="test1">Euler </label>
     </p>
     <p>
-      <input class="with-gap" name="group1" type="radio" id="test2" onclick="sendMq('Pi_Control_Set_Config_2')"/>
+      <input class="with-gap disabled" name="group1" type="radio" id="test2" onclick="sendMq('Pi_Control_Set_Config_2')"/>
       <label for="test2">Quaternion</label>
     </p>
     <p>
@@ -92,7 +93,7 @@ Skate Control V{{ version }}
       <label for="test3">Euler & Accelerometer</label>
     </p>
     <p>
-      <input class="with-gap" name="group1" type="radio" id="test4"  onclick="sendMq('Pi_Control_Set_Config_4')"/>
+      <input class="with-gap disabled" name="group1" type="radio" id="test4"  onclick="sendMq('Pi_Control_Set_Config_4')"/>
       <label for="test4">Quaternion & Accelerometer</label>
     </p>
   </form>
@@ -126,9 +127,9 @@ Skate Control V{{ version }}
 
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Enable_Stream')">Start Poll Stream</a>
 <a class="waves-effect waves-light btn-flat" onclick="sendMq('Pi_Control_Disable_Stream')">Stop Poll Stream</a>
-<div id = "renderspace"></div>
+<canvas id = "renderspace"></div>
 
-</div>
+</canvas>
 <div class = "card grey col s12">
 <p id = "newestFrame"></p>
 <p>Fetch live logs at http://nwajagu.com/sensorlog/</p>
@@ -136,53 +137,162 @@ Skate Control V{{ version }}
 </div>
 </main>
 <script>
+  function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
+    console.log(boxCenter);
+    const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
+    const halfFovY = THREE.Math.degToRad(camera.fov * .5);
+    const distance = halfSizeToFitOnScreen / Math.tan(halfFovY);
+    // compute a unit vector that points in the direction the camera is now
+    // in the xz plane from the center of the box
+    const direction = (new THREE.Vector3())
+        .subVectors(camera.position, boxCenter)
+        .multiply(new THREE.Vector3(1, 0, 1))
+        .normalize();
 
-var loader = new THREE.GLTFLoader();
-var scene = new THREE.Scene();
+    // move the camera to a position distance units way from the center
+    // in whatever direction the camera was from the center already
+    camera.position.copy(direction.multiplyScalar(distance).add(boxCenter));
+
+    // pick some near and far values for the frustum that
+    // will contain the box.
+    camera.near = boxSize / 100;
+    camera.far = boxSize * 100;
+
+    camera.updateProjectionMatrix();
+
+    // point the camera to look at the center of the box
+    //camera.lookAt(boxCenter.x, boxCenter.y, boxCenter.z);
+  }
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('white');
+
 var rx,ry,rz;
 var object;
+
+const fov = 45;
+const aspect = 2;  // the canvas default
+const near = 0.1;
+const far = 100;
+var box;
+
+
+//camera.position.set(0, 10, 20);
+
+const canvas = document.getElementById('renderspace');
+
+var renderer = new THREE.WebGLRenderer({canvas: canvas});
+
+const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
+
+  {
+    const skyColor = 0xB1E1FF;  // light blue
+    const groundColor = 0xB97A20;  // brownish orange
+    const intensity = 1;
+    const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
+    scene.add(light);
+  }
+
+  {
+    const color = 0xFFFFFF;
+    const intensity = 1;
+    const light = new THREE.DirectionalLight(color, intensity);
+    light.position.set(5, 10, 2);
+    scene.add(light);
+    scene.add(light.target);
+  }
+
+  {
+    const gltfLoader = new THREE.GLTFLoader();
+    gltfLoader.load('/skateboard/scene.gltf', (gltf) => {
+      var root = gltf.scene;
+      //root.scale.set(10, 10, 10);
+      scene.add(root);
+
+      // compute the box that contains all the stuff
+      // from root and below
+      box = new THREE.Box3().setFromObject(root);
+      //console.log(box);
+      const boxSize = box.getSize(new THREE.Vector3()).length();
+      const boxCenter = box.getCenter(new THREE.Vector3());
+
+      camera.position.set(0,1,5); 
+      camera.lookAt(scene.position);
+
+
+      // set the camera to frame the box
+      //frameArea(boxSize * 0.5, boxSize, boxCenter, camera);
+
+      // update the Trackball controls to handle the new size
+      //controls.maxDistance = boxSize * 10;
+      //controls.target.copy(boxCenter);
+      //controls.update();
+    });
+  }
+
+
+
+/*
+  const controls = new THREE.OrbitControls(camera, canvas);
+
+    controls.target.set(0, 5, 0);
+  controls.update();
+*/
+/*
 loader.load( '/skateboard/scene.gltf', function ( gltf ) {
-	object = gltf.scene;
-  object.scale.set(10, 10, 10);
+  object = gltf.scene;
+  //object.scale.set(10, 10, 10);
+    scene.add( object);
 
-	scene.add( object);
-	//console.log(object);
+  const box = new THREE.Box3().setFromObject(object);
+  boxSize = box.getSize(new THREE.Vector3()).length();
+  boxCenter_ = box.getCenter(new THREE.Vector3());
 
-	}, undefined, function ( error ) {
 
-		console.error( error );
 
-	} );
-var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+  }, undefined, function ( error ) {
 
-var renderer = new THREE.WebGLRenderer();
+    console.error( error );
 
-var container = document.getElementById('renderspace');
+  } );
+
+
+
+frameArea(boxSize * 0.5, boxSize, boxCenter_, camera);
+*/
 //console.log(container);
 var w = 800;
 var h = 800;
 renderer.setSize(w,h);
 
-container.appendChild( renderer.domElement );
+//container.appendChild( renderer.domElement );
 
 var m4 = new THREE.Matrix4();
-camera = new THREE.PerspectiveCamera( 60, w / h, 1, 200 );
-camera.position.z = 10;
+
+//camera = new THREE.PerspectiveCamera( 60, w / h, 1, 200 );
+//camera.position.z = 10;
 var rot = 0;
 
 var socket = io();
 
 
 function animate() {
-requestAnimationFrame( animate );
-object.rotation.x = rx;
-object.rotation.y = ry;
-object.rotation.z = rz;
+//console.log("X" + rx + ",Y:" + ry + ",Z:" + rz);
+scene.children[3].rotation.x = rx;
+scene.children[3].rotation.y = ry;
+
+//m4.makeRotationFromEuler(new THREE.Euler( rx,ry, 1.57, 'XYZ' ));
+//console.log(m4);
+//box.applyMatrix4(m4);
+//box.rotation.y = ry;
+//object.rotation.z = rz;
 
 //object.setRotationFromMatrix(m4);
 
 //console.log(scene.children[0]);
 renderer.render( scene, camera );
+requestAnimationFrame( animate );
+
 }
 
 
@@ -224,9 +334,10 @@ socket.emit("web_command",msg);
 
      socket.on('Web_Alert_New_PollFrame', function(msg){
       //$('#messages').append($('<li>').text('frame count: ' + msg));
-      rx = msg.x;
-      ry = msg.y;
-      rz = msg.y;
+      jsonmsg = JSON.parse(msg);
+      rx = jsonmsg.y * 0.01745; // threejs uses radian, convert our degree to radian (pi/180)
+      ry = jsonmsg.x * 0.01745;  //axis of model are swapped, so swap
+      rz = jsonmsg.z * 0.01745;
      //rot = new THREE.Euler(rx,ry,rz,'XYZ');
  	//m4.makeRotationFromEuler(rot);
  	//console.log(m4);
